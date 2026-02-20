@@ -2,9 +2,9 @@ name: Spring Boot Application CI/CD with Postgres
 
 on:
   push:
-    branches: [ "main", "dev", "workflow" ]
+    branches: ["main", "dev"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -26,7 +26,8 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -36,19 +37,22 @@ jobs:
           cache: maven
 
       - name: Wait for Postgres to be ready
-        run: sleep 10
+        run: |
+          for i in {1..30}; do
+            nc -z localhost 5432 && echo "Postgres ready" && break
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
 
-      - name: Run Flyway migrations (optional if you use Flyway)
-        run: mvn flyway:migrate
-        env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/webapp_test
-          SPRING_DATASOURCE_USERNAME: postgres
-          SPRING_DATASOURCE_PASSWORD: password
+      - name: Run Flyway migrations
+        run: mvn flyway:migrate \
+             -Dflyway.url=jdbc:postgresql://localhost:5432/webapp_test \
+             -Dflyway.user=postgres \
+             -Dflyway.password=password
 
-      - name: Run tests with Maven
+      - name: Run Tests with Maven
         run: mvn clean test
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/webapp_test
           SPRING_DATASOURCE_USERNAME: postgres
           SPRING_DATASOURCE_PASSWORD: password
-          SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
