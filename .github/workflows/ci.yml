@@ -2,7 +2,7 @@ name: Spring Boot Application CI/CD with Postgres
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "workflow" ]
   pull_request:
     branches: [ "main" ]
 
@@ -10,7 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # This spins up Postgres so your Integration Tests can run
     services:
       postgres:
         image: postgres:15
@@ -20,7 +19,6 @@ jobs:
           POSTGRES_USER: postgres
         ports:
           - 5432:5432
-        # Wait until postgres is ready before starting the job
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -37,10 +35,20 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Tests with Maven
-        run: mvn clean test
+      - name: Wait for Postgres to be ready
+        run: sleep 10
+
+      - name: Run Flyway migrations (optional if you use Flyway)
+        run: mvn flyway:migrate
         env:
-          # Override properties so Spring connects to the GitHub Postgres service
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/webapp_test
           SPRING_DATASOURCE_USERNAME: postgres
           SPRING_DATASOURCE_PASSWORD: password
+
+      - name: Run tests with Maven
+        run: mvn clean test
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/webapp_test
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: password
+          SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
