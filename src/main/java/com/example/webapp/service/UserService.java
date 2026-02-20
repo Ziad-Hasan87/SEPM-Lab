@@ -6,7 +6,6 @@ import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.example.webapp.dto.RegisterDTO;
-
 import java.util.Collections;
 
 @Service
